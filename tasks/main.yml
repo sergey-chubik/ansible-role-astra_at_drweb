@@ -1,0 +1,88 @@
+---
+# tasks file for astra_at_drweb
+- name: astra_at_drweb | Populate service facts in start playbook
+  service_facts:
+
+- name: astra_at_drweb | Delete old package DrWeb
+  shell: /opt/drweb.com/bin/remove.sh --non-interactive
+  when: "'drweb-configd' in ansible_facts.services and astra_at_drweb_old_delete"
+
+- block:
+    - name: astra_at_drweb | Change bit execution install file DrWeb
+      file:
+        path: "{{ astra_at_drweb_install_file_path }}/{{ astra_at_drweb_install_file }}"
+        state: touch
+        mode: "u+rwx"
+        modification_time: "preserve"
+        access_time: "preserve"
+    
+    - name: astra_at_drweb | Install DrWeb from universal package
+      shell: |
+        "{{ astra_at_drweb_install_file_path }}/{{ astra_at_drweb_install_file }}" -- --non-interactive
+    
+    - name: astra_at_drweb | Configure file privsock.conf
+      lineinfile:
+        path: /etc/parsec/privsock.conf
+        line: "{{ item }}"
+      loop:
+        - /opt/drweb.com/bin/drweb-configd
+        - /opt/drweb.com/bin/drweb-configd.real
+
+    - name: astra_at_drweb | Configure file PAM, SpIDerGuard and Update settings for DrWeb
+      shell: |
+        drweb-configure session enable
+        drweb-ctl cfset LinuxSpider.Mode Fanotify
+        drweb-ctl cfset Update.UpdateInterval "{{ astra_at_drweb_update_interval }}"
+        drweb-ctl cfset Update.MaxRetries "{{ astra_at_drweb_update_max_retries }}"
+        drweb-ctl reload
+
+    - name: astra_at_drweb | Copy licensed file drweb32.key
+      copy:
+        src: "{{ astra_at_drweb_licensed_key_path }}/{{ astra_at_drweb_licensed_key }}"
+        dest: /etc/opt/drweb.com/drweb32.key
+        remote_src: yes
+        owner: root
+        group: root
+        mode: '0644'
+  when: "'drweb-configd' not in ansible_facts.services and astra_at_drweb_install"
+
+- block:
+    - name: astra_at_drweb | Install package Rsync
+      apt:
+        name: rsync
+      when: "'rsync' not in ansible_facts.services"
+    
+    - name: astra_at_drweb | Stop service drweb-configd before update
+      service:
+        name: drweb-configd
+        state: stopped
+
+    - name: astra_at_drweb | Change permissions file Update DrWeb
+      file:
+        path: "{{ astra_at_drweb_update_path }}"
+        state: directory
+        mode: "u+rw"
+        recurse: yes
+        modification_time: "preserve"
+        access_time: "preserve"
+
+    - name: astra_at_drweb | Synchronize file Update DrWeb
+      synchronize:
+        src: "{{ astra_at_drweb_update_path }}/{{ item.src }}"
+        dest: "/var/opt/drweb.com/{{ item.dest }}"
+        recursive: yes
+        group: no
+        owner: no
+        perms: no
+      delegate_to: "{{ inventory_hostname }}"
+      loop:
+        -  { src: 'bases/', dest: 'bases' }
+        -  { src: 'dws/', dest: 'dws' }
+        -  { src: 'cache/update/', dest: 'cache/update' }
+        -  { src: 'lib/update.st', dest: 'lib/update.st' }
+    
+    - name: astra_at_drweb | Start service drweb-configd after update
+      service:
+        name: drweb-configd
+        state: started
+  when: astra_at_drweb_update

@@ -1,0 +1,23 @@
+---
+# defaults file for astra_at_drweb
+astra_at_drweb_files_path: "{{ role_path }}/files"
+astra_at_drweb_templates_path: "{{ role_path }}/templates"
+# Удалить ранее установленную версию DrWeb перед началом сценария (если true то остальные значения нужно выставить в false)
+astra_at_drweb_old_delete: false
+
+# Название и путь к директории где расположен инсталляционный файл DrWeb
+astra_at_drweb_install: true
+astra_at_drweb_install_file: drweb-11.1.3-av-linux-amd64.run
+astra_at_drweb_install_file_path: /home/user/astra
+# Название и путь к директории где расположен файл с ключем активации DrWeb
+astra_at_drweb_licensed_key: drweb32.key
+astra_at_drweb_licensed_key_path: /home/user/astra
+# Частота проверки наличия обновлений на серверах Dr.Web
+astra_at_drweb_update_interval: 30d
+# Количество повторных попыток выполнить обновление с серверов Dr.Web
+astra_at_drweb_update_max_retries: 0
+
+# Выполнить обновление антивирусных баз DrWeb из локальных файлов (необходим установленный rsync в системе)
+astra_at_drweb_update: true
+# Путь до директории где расположены файлы антивирусных баз (bases/, dws/, cache/update/, lib/update.st)
+astra_at_drweb_update_path: /home/user/astra/drweb-update
